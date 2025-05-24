@@ -35,29 +35,36 @@ def main():
              "")
 
     stocks=("BBCA.JK")
-    # st.markdown(
-    #     '<h3 style="color: gold;">How many days before you want to see for comparison?</h3><br></br>',
-    #     unsafe_allow_html=True,
-    # )
-    # selected_stock = st.selectbox("\nSelect dataset for prediction", stocks)
-
-    # n_years = st.slider("Day of prediction:", 1, 4)
-    # n_years = st.slider("Day of prediction:", 1, 4, key="temp_slider")
     n_years=3
-    # period = n_years *365
-
-    # @st.cache_data
-    # def load_data(ticker):
-    #     data = yf.download(ticker, START, TODAY)
-    #     data.reset_index(inplace=True)
-    #     return data
-    def load_data():
-        data = pd.read_csv("BBCA_data.csv")
-        data['Date'] = pd.to_datetime(data['Date'])
+    def load_data(stock):
+        # data = pd.read_csv("BBCA_data.csv")
+        try:
+            # 3. Ambil data dari yfinance
+            data = yf.Ticker(stock)
+            data = data.history(period="max")
+            data.reset_index(inplace=True)
+            data['Date'] = data['Date'].dt.date
+            data['Date'] = pd.to_datetime(data['Date'])
+            
+            # 4. Cek apakah data kosong
+            if data.empty:
+                st.warning("Data tidak ditemukan untuk kode saham tersebut.")
+            else:
+                st.success("Data berhasil diambil!")
+                # st.write(data.tail())  # Atau lanjutkan dengan plot/prediksi
+        except Exception as e:
+            st.error(f"Terjadi error saat mengambil data : terkena limit atau data tidak ada pada database")
+            return pd.DataFrame()
         return data
     
-    # data_load_state = st.text("Load data...")
-    data = load_data()
+    stock = st.text_input("Masukkan kode saham (contoh: BBCA.JK):")
+    if stock:
+        data = load_data(stock)
+    else:
+        data = load_data("BBCA.JK")
+    
+    if data.empty:
+        return
     # data_load_state.text("Loading data...done!")
 
     # Debug: Periksa kolom data
@@ -180,7 +187,7 @@ def main():
     # print(data)
     data.index = data.pop('Date')
     start = '2004-07-12'
-    end = '2025-02-07'
+    end = datetime.date.today().strftime('%Y-%m-%d')
     
     # windowed_df = df_to_windowed_df(data, start , end, n_years)
     def process_data(data, start, end, n_years):
